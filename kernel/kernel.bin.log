@@ -1,0 +1,173 @@
+
+EXE TO BIN IMAGE CONVERTER
+file size is 2401
+
+******** DOS MZ EXE HEADER *********
+MZ header             5a4d
+BytesInLastBlock      90  
+BlocksInFile          3   
+RelocateEntryNumber   0   
+ParagraphNumber       4   
+MinimunExtraParagraph 0   
+MaximunExtraParagraph ffff
+StackSegment          0   
+StackPointer          b8  
+Checksum              0   
+InstructionPointer    0   
+CodeSegment           0   
+FirstLocationAddress  40  
+OverlayNumber         0   
+OemId                 0 
+OemInfo               0 
+PeHeaderAddress       80  
+
+******** PE HEADER *********
+Machine               14c 
+SectionNumber         6   
+TimeStamp             6d6d6f63
+SymbolsTablePointer   0   
+SymbolsNumber         0   
+OptionalHeaderSize    e0  
+Characteristics       30f 
+
+******** PE OPTIONAL HEADER *********
+Signature             10b 
+MajorLinkerVersion    2   
+MinorLinkerVersion    18  
+CodeSize              1200
+InitializedDataSize   e00 
+UninitializedDataSize 19600
+EntryPointAddress     ffc12000
+CodeBase              ffc12000
+DataBase              ffc14000
+ImageBase             400000
+SectionAlignment      1000
+FileAlignment         200 
+MajorOperationSystemVersion 200 
+MinorOperationSystemVersion 200 
+MajorImageVersion     200 
+MinorImageVersion     200 
+MajorSubsystemVersion 200 
+MinorSubsystemVersion 200 
+Reserved              0   
+ImageSize             ffc32000
+HeaderSize            400 
+Checksum              9e4d
+Subsystem             9e4d
+DllCharacteristics    9e4d
+StackReserveSize      200000
+StackCommitSize       1000
+HeapReserveSize       100000
+HeapCommitSize        1000
+LoaderFlag            0   
+RvaNumber             10  
+directory  0          0   
+directory  0          0   
+directory  1          ffc31000
+directory  1          14  
+directory  2          0   
+directory  2          0   
+directory  3          0   
+directory  3          0   
+directory  4          0   
+directory  4          0   
+directory  5          0   
+directory  5          0   
+directory  6          0   
+directory  6          0   
+directory  7          0   
+directory  7          0   
+directory  8          0   
+directory  8          0   
+directory  9          0   
+directory  9          0   
+directory  a          0   
+directory  a          0   
+directory  b          0   
+directory  b          0   
+directory  c          0   
+directory  c          0   
+directory  d          0   
+directory  d          0   
+directory  e          0   
+directory  e          0   
+directory  f          0   
+directory  f          0   
+******** SECTION TABLE *********
+
+(Section number 0 )
+Section name:         .text
+VirtualSize           1060
+VirtualAddress        12000
+RawDataSize           1200
+RawDataPointer        400 
+RelocationPointer     0   
+LineNumberPointer     0   
+RelocationNumber      0   
+LineNumbersNumber     0   
+Chartacteristics      60500020
+
+(Section number 1 )
+Section name:         .data
+VirtualSize           5c0 
+VirtualAddress        14000
+RawDataSize           600 
+RawDataPointer        1600
+RelocationPointer     0   
+LineNumberPointer     0   
+RelocationNumber      0   
+LineNumbersNumber     0   
+Chartacteristics      c0600040
+
+(Section number 2 )
+Section name:         .rdata
+VirtualSize           f4  
+VirtualAddress        15000
+RawDataSize           200 
+RawDataPointer        1c00
+RelocationPointer     0   
+LineNumberPointer     0   
+RelocationNumber      0   
+LineNumbersNumber     0   
+Chartacteristics      40300040
+
+(Section number 3 )
+Section name:         .eh_fram
+VirtualSize           318 
+VirtualAddress        16000
+RawDataSize           400 
+RawDataPointer        1e00
+RelocationPointer     0   
+LineNumberPointer     0   
+RelocationNumber      0   
+LineNumbersNumber     0   
+Chartacteristics      40300040
+
+(Section number 4 )
+Section name:         .bss
+VirtualSize           19520
+VirtualAddress        17000
+RawDataSize           0   
+RawDataPointer        0   
+RelocationPointer     0   
+LineNumberPointer     0   
+RelocationNumber      0   
+LineNumbersNumber     0   
+Chartacteristics      c0600080
+
+(Section number 5 )
+Section name:         .idata
+VirtualSize           14  
+VirtualAddress        31000
+RawDataSize           200 
+RawDataPointer        2200
+RelocationPointer     0   
+LineNumberPointer     0   
+RelocationNumber      0   
+LineNumbersNumber     0   
+Chartacteristics      c0300040
+******** exe file parsing success!!! ************
+
+entry point    12000H
+forming binary image
+BIN IMAGE is    20000h

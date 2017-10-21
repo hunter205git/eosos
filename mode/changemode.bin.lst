@@ -1,0 +1,183 @@
+     1                                  %include "macro.inc"
+     2                              <1> ;Fill the Descriptor Table
+     3                              <1> ;	%macro [macroName] [numberOfParameters]
+     4                              <1> ;	%endmacro
+     5                              <1> ;WAY TO USE
+     6                              <1> ;LABEL:	Descriptor	Base, Limit,	Attribute
+     7                              <1> 
+     8                              <1> %macro Descriptor 3
+     9                              <1> 	dw %2 & 0FFFFh
+    10                              <1> 	dw %1 & 0FFFFh
+    11                              <1> 	db (%1>>16) & 0FFh
+    12                              <1> 	dw ((%2>>8) & 0F00h) | (%3 & 0F0FFh)
+    13                              <1> 	db (%1>>24) & 0FFh
+    14                              <1> %endmacro
+    15                              <1> 
+    16                              <1> ;Descriptor attribute
+    17                              <1> ;----------------------------------------------------------------------------
+    18                              <1> ; Type definitions
+    19                              <1> ;       DA_  : Descriptor Attribute
+    20                              <1> ;		G	 : Granularity
+    21                              <1> ;       D    : Data Segment
+    22                              <1> ;       C    : Code Segment
+    23                              <1> ;       S    : System Segment
+    24                              <1> ;       R    : Read
+    25                              <1> ;       RW   : Read & write
+    26                              <1> ;       A    : Access
+    27                              <1> ;----------------------------------------------------------------------------
+    28                              <1> DA_16		EQU 0000h
+    29                              <1> DA_32		EQU	4000h	; 32 ¶Ï¨q
+    30                              <1> 
+    31                              <1> DA_G_1B		EQU	0000h	; Limit™∫≥Ê¶Ï¨∞1B
+    32                              <1> DA_G_4KB	EQU	8000h	; Limit™∫≥Ê¶Ï¨∞4KB
+    33                              <1> 
+    34                              <1> DA_DPL0		EQU	  00h	; DPL = 0
+    35                              <1> DA_DPL1		EQU	  20h	; DPL = 1
+    36                              <1> DA_DPL2		EQU	  40h	; DPL = 2
+    37                              <1> DA_DPL3		EQU	  60h	; DPL = 3
+    38                              <1> ;----------------------------------------------------------------------------
+    39                              <1> ; ¶s¿x¨q¥y≠z≤≈√˛´¨≠»ª°©˙
+    40                              <1> ;----------------------------------------------------------------------------
+    41                              <1> DA_DR		EQU	90h	; ¶s¶b™∫•u≈™º∆æ⁄¨q√˛´¨≠»
+    42                              <1> DA_DRW		EQU	92h	; ¶s¶b™∫•i≈™ºgº∆æ⁄¨qƒ›© ≠»
+    43                              <1> DA_DRWA		EQU	93h	; ¶s¶b™∫§w≥X∞›•i≈™ºgº∆æ⁄¨q√˛´¨≠»
+    44                              <1> DA_C		EQU	98h	; ¶s¶b™∫•u∞ı¶Ê•NΩX¨qƒ›© ≠»
+    45                              <1> DA_CR		EQU	9Ah	; ¶s¶b™∫•i∞ı¶Ê•i≈™•NΩX¨qƒ›© ≠»
+    46                              <1> DA_CCO		EQU	9Ch	; ¶s¶b™∫•u∞ı¶Ê§@≠P•NΩX¨qƒ›© ≠»
+    47                              <1> DA_CCOR		EQU	9Eh	; ¶s¶b™∫•i∞ı¶Ê•i≈™§@≠P•NΩX¨qƒ›© ≠»
+    48                                  
+    49                                  %define REALMODE_SEGMENT       0x1000     ;real mode segment 
+    50                                  %define REALMODE_SEGMENT_PHYADDR	REALMODE_SEGMENT * 10h        
+    51                                  %define REALMODE_IMAGE_SIZE    0x0200     ;real mode code size 
+    52                                  %define REALMODE_STACK_POINTER 0x1fe      ;real mode stack pointer
+    53                                  %define PROTECTIONMODE_START   0x00010200 ;protection mode code address
+    54                                  %define KERNEL_ADDRESS         0x00012000 ;
+    55                                  %define CHANGEMODE_SIZE        0x2000     ;
+    56                                  %define CODE_SEGMENT           0x08
+    57                                  %define DATA_SEGMENT           0x10
+    58                                  %define GRAPH_SEGMENT          0x18
+    59                                  PageDirBase		equ	200000h	; È†ÅÁõÆÈåÑÈñãÂßã‰ΩçÂùÄ:	2M
+    60                                  PageTblBase		equ	201000h	; È†ÅË°®ÈñãÂßã‰ΩçÂùÄ:		2M +  4K
+    61                                  
+    62                                  bits 16          
+    63                                  org 0x0000
+    64                                  RealModeStart:                    ;range of realinit is [0x1000:0x0000]~[0x1000:0x03FF]
+    65 00000000 EB0A                        jmp L_RealModeInitial
+    66 00000002 00                      times (3-($-$$)) db 0x00          ;make sure this address is at 0x03    
+    67 00000003 7265616C6D6F646500      RealModeMessage: db "realmode",0  ;string of realmode
+    68                                  RealModeVariable:                 ;this line should be at 0x0001000C
+    69                                  
+    70                                  L_RealModeInitial:
+    71 0000000C B80010                      mov ax,REALMODE_SEGMENT      ;ax=0x1000
+    72 0000000F 8ED8                        mov ds,ax                    ;data segment 0x1000
+    73 00000011 8EC0                        mov es,ax                    ;extra segment 0x1000
+    74 00000013 8ED0                        mov ss,ax                    ;stack segment 0x1000
+    75 00000015 BCFE01                      mov sp,REALMODE_STACK_POINTER ;stack pointer [ss:sp]
+    76                                                                   ;prepare to enter protected mode.                                 
+    77 00000018 EB00                        jmp L_EnterProtectionMode
+    78                                      
+    79                                  L_EnterProtectionMode:   
+    80 0000001A E492                        in al,0x92
+    81 0000001C 0C02                        or al,0x02
+    82 0000001E E692                        out 0x92,al
+    83                                  
+    84 00000020 0F0116[9E02]                lgdt [GdtLoader]             ;load gdt table
+    85                                  
+    86 00000025 0F20C0                      mov eax,cr0                  ;get cpu cr0 register
+    87 00000028 6683C801                    or eax,0x01                  ;set the PE bit of CR0 register.
+    88 0000002C 0F22C0                      mov cr0,eax                  ;enter the protected mode.
+    89 0000002F 66EA000201000800            jmp dword CODE_SEGMENT:PROTECTIONMODE_START  ;protected mode...run protect mode code
+    90                                                                           ;0x08 is byte offset in GdtTables                      
+    91                                                                           
+    92 00000037 00<rept>                times (REALMODE_IMAGE_SIZE-($-$$)) db 0x00   ; fill out the rest of 512 bytes with 0x00
+    93                                  
+    94                                  bits 32 
+    95                                  ProtectionModeStart:                    
+    96 00000200 EB0F                        jmp L_ProtectionMode
+    97 00000202 70726F74656374696F-     ProtectionModeMessage: db "protectionmode",0 ;string of protection mode
+    98 0000020B 6E6D6F646500       
+    99                                  L_ProtectionMode:
+   100                                  
+   101 00000211 66B81000                    mov ax,DATA_SEGMENT
+   102 00000215 8ED8                        mov ds,ax
+   103 00000217 8ED0                        mov ss,ax
+   104 00000219 8EC0                        mov es,ax
+   105 0000021B 8EE0                        mov fs,ax
+   106 0000021D BC[A4120100]            	mov esp,TopOfStack
+   107 00000222 66B81800                	mov ax,GRAPH_SEGMENT
+   108 00000226 8EE8                        mov gs,ax                    ;graphics segment is not used,set it to extra segment gdt entry is at 0x28 of GdtTable
+   109                                  	
+   110                                  SetupPaging:
+   111                                  	;ÂàùÂßãÂåñPage Directory
+   112 00000228 66B81000                	mov ax, DATA_SEGMENT
+   113 0000022C 8EC0                    	mov es, ax
+   114 0000022E B900040000              	mov ecx, 1024	;ÂÅáË®≠Ë®òÊÜ∂È´îÊúâ4GÔºåÈúÄ1024ÂÄãPDE
+   115 00000233 31FF                    	xor edi, edi
+   116 00000235 BF00002000              	mov edi, PageDirBase
+   117 0000023A 31C0                    	xor eax, eax
+   118 0000023C B807102000              	mov eax, PageTblBase | 0x01 | 0x02 | 0x04
+   119                                  .1:
+   120 00000241 AB                      	stosd	;Store double word in EAX at [ES:EDI] and increment the addressing resgisters by 4
+   121 00000242 0500100000              	add eax, 4096
+   122 00000247 E2F8                    	loop .1
+   123                                  	
+   124                                  	;ÂàùÂßãÂåñPage Table
+   125 00000249 B900001000              	mov	ecx, 1024 * 1024	; ÊØèÂÄãPDEÂ∞çÊáâÂà∞1024ÂÄãPTEÔºåÂÖ±Êúâ1024ÂÄãPDEÔºåÂõ†Ê≠§ÂÖ±Êúâ1MÂÄãPTE
+   126 0000024E 31FF                    	xor	edi, edi
+   127 00000250 BF00102000              	mov edi, PageTblBase
+   128 00000255 31C0                    	xor	eax, eax
+   129 00000257 B807000000              	mov	eax, 0x01 | 0x02 | 0x04
+   130                                  .2:
+   131 0000025C AB                      	stosd
+   132 0000025D 0500100000              	add	eax, 4096		; ÊØè‰∏ÄÂÄãPTEÂ∞çÊáâÂà∞4KË®òÊÜ∂È´î
+   133 00000262 E2F8                    	loop	.2
+   134                                  	
+   135                                  	;Ë®≠ÂÆöcr3
+   136 00000264 B800002000              	mov eax, 0x200000 ;The upper 20 bits of CR3 are the page directory base register (PDBR),
+   137 00000269 0F22D8                  	mov cr3, eax			 ; which stores the physical address of the first page directory entry
+   138                                  	
+   139                                  	;Ë®≠ÂÆöcr0
+   140 0000026C 0F20C0                  	mov eax, cr0
+   141 0000026F 0D00000080              	or eax, 0x80000000 ; Set the PG (Paging) bit of the CR0 register
+   142 00000274 0F22C0                  	mov cr0, eax
+   143                                  
+   144 00000277 EA002001000800              jmp dword CODE_SEGMENT:KERNEL_ADDRESS
+   145                                         
+   146                                  ;GDT------------------------------------------------------------------------------
+   147                                  GdtTable:
+   148                                  	NullGdt:			Descriptor	0,		 0,			0
+   149                              <1>  NullGdt: 
+   150 0000027E 0000                <1>  dw %2 & 0FFFFh
+   151 00000280 0000                <1>  dw %1 & 0FFFFh
+   152 00000282 00                  <1>  db (%1>>16) & 0FFh
+   153 00000283 0000                <1>  dw ((%2>>8) & 0F00h) | (%3 & 0F0FFh)
+   154 00000285 00                  <1>  db (%1>>24) & 0FFh
+   155                                  	CodeSegmentGdt:		Descriptor	0,		 0fffffh,	DA_CR 	| DA_32 | DA_G_4KB
+   156                              <1>  CodeSegmentGdt: 
+   157 00000286 FFFF                <1>  dw %2 & 0FFFFh
+   158 00000288 0000                <1>  dw %1 & 0FFFFh
+   159 0000028A 00                  <1>  db (%1>>16) & 0FFh
+   160 0000028B 9ACF                <1>  dw ((%2>>8) & 0F00h) | (%3 & 0F0FFh)
+   161 0000028D 00                  <1>  db (%1>>24) & 0FFh
+   162                                  	DataSegmentGdt:		Descriptor	0,		 0fffffh,	DA_DRW	| DA_32	| DA_G_4KB	
+   163                              <1>  DataSegmentGdt: 
+   164 0000028E FFFF                <1>  dw %2 & 0FFFFh
+   165 00000290 0000                <1>  dw %1 & 0FFFFh
+   166 00000292 00                  <1>  db (%1>>16) & 0FFh
+   167 00000293 92CF                <1>  dw ((%2>>8) & 0F00h) | (%3 & 0F0FFh)
+   168 00000295 00                  <1>  db (%1>>24) & 0FFh
+   169                                  	GraphicSegmentGdt:	Descriptor	0B8000h, 00ffffh,	DA_DRW
+   170                              <1>  GraphicSegmentGdt: 
+   171 00000296 FFFF                <1>  dw %2 & 0FFFFh
+   172 00000298 0080                <1>  dw %1 & 0FFFFh
+   173 0000029A 0B                  <1>  db (%1>>16) & 0FFh
+   174 0000029B 9200                <1>  dw ((%2>>8) & 0F00h) | (%3 & 0F0FFh)
+   175 0000029D 00                  <1>  db (%1>>24) & 0FFh
+   176                                  GdtByteCount	equ	$ - GdtTable
+   177 0000029E 1F00                    GdtLoader		dw 	GdtByteCount - 1
+   178 000002A0 [7E020100]              				dd	REALMODE_SEGMENT_PHYADDR + GdtTable
+   179                                  ;--------------------------------------------------------------------------------
+   180                                  
+   181 000002A4 00<rept>                StackSpace:	times	1000h	db	0
+   182                                  TopOfStack	equ	REALMODE_SEGMENT_PHYADDR + $				
+   183 000012A4 00<rept>                times (CHANGEMODE_SIZE-($-$$)) db 0x00   ; fill out the rest of 1024 bytes with 0x00    

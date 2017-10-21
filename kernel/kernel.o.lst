@@ -1,0 +1,350 @@
+     1                                  %include "sconst.inc"
+     2                              <1> 
+     3                              <1> ;STACK_FRAME of each process
+     4                              <1> P_STACKBASE	equ	0
+     5                              <1> GSREG		equ	P_STACKBASE
+     6                              <1> FSREG		equ	GSREG		+ 4
+     7                              <1> ESREG		equ	FSREG		+ 4
+     8                              <1> DSREG		equ	ESREG		+ 4
+     9                              <1> EDIREG		equ	DSREG		+ 4
+    10                              <1> ESIREG		equ	EDIREG		+ 4
+    11                              <1> EBPREG		equ	ESIREG		+ 4
+    12                              <1> KERNELESPREG	equ	EBPREG		+ 4
+    13                              <1> EBXREG		equ	KERNELESPREG	+ 4
+    14                              <1> EDXREG		equ	EBXREG		+ 4
+    15                              <1> ECXREG		equ	EDXREG		+ 4
+    16                              <1> EAXREG		equ	ECXREG		+ 4
+    17                              <1> EIPREG		equ	EAXREG		+ 4
+    18                              <1> CSREG		equ	EIPREG		+ 4
+    19                              <1> EFLAGSREG	equ	CSREG		+ 4
+    20                              <1> 
+    21                              <1> P_PROCBASE equ 0
+    22                              <1> ESPREG		equ	P_PROCBASE
+    23                              <1> SSREG		equ	ESPREG		+ 4
+    24                              <1> P_STACKTOP	equ	SSREG		+ 4
+    25                              <1> P_LDT_SEL	equ	P_STACKTOP
+    26                              <1> P_LDT		equ	P_LDT_SEL	+ 4
+    27                                  ;C function
+    28                                  extern _cinit
+    29                                  extern _set_timer
+    30                                  extern _kernel_main
+    31                                  extern _scheduler
+    32                                  extern _spurious_irq
+    33                                  extern _exception_handler
+    34                                  extern _print_int
+    35                                  extern _print_str
+    36                                  extern _mem_dump
+    37                                  
+    38                                  ;global variable
+    39                                  extern _gdt_info
+    40                                  extern _idt_info
+    41                                  extern _p_proc_ready
+    42                                  
+    43                                  %define SELECTOR_KERNEL_CS 0x08
+    44                                  %define SELECTOR_KERNEL_DS 0x10
+    45                                  
+    46                                  bits 32
+    47                                  
+    48                                  [SECTION .data]
+    49 00000000 00000000                kernel_esp dd 0
+    50 00000004 30000000                int_output dd '0'
+    51                                  
+    52                                  [SECTION .bss] 
+    53                                  ;用來存放程序中未初始化的全局變量的一塊內存區域。
+    54                                  ;BSS是英文Block Started by Symbol的簡稱。
+    55                                  ;BSS段屬於靜態內存分配。.bss section 的空間結構類似於 stack
+    56 00000000 <res 00000800>          StackSpace resb 2 * 1024
+    57                                  StackTop:	;Top of the Stack
+    58                                  
+    59                                  [SECTION .text]
+    60                                  ;asm function
+    61                                  global _restart
+    62                                  
+    63                                  global _divide_error		 	 	
+    64                                  global _debug_exception	 	
+    65                                  global _nmi				 		 	
+    66                                  global _breakpoint_exception
+    67                                  global _overflow			 		
+    68                                  global _bounds_check		 	
+    69                                  global _invalid_opcode		 	
+    70                                  global _coproc_not_avalible 
+    71                                  global _double_fault		 		
+    72                                  global _coproc_seg_overrun
+    73                                  global _invalid_tss,		 		
+    74                                  global _seg_not_present	 	
+    75                                  global _stack_exception	 	
+    76                                  global _general_protection	
+    77                                  global _page_fault			 	
+    78                                  global _coproc_error		 	
+    79                                  global _hwint00
+    80                                  global _hwint01
+    81                                  global _hwint02
+    82                                  global _hwint03
+    83                                  global _hwint04
+    84                                  global _hwint05
+    85                                  global _hwint06
+    86                                  global _hwint07
+    87                                  global _hwint08
+    88                                  global _hwint09
+    89                                  global _hwint10
+    90                                  global _hwint11
+    91                                  global _hwint12
+    92                                  global _hwint13
+    93                                  global _hwint14
+    94                                  global _hwint15
+    95                                  
+    96                                  _start:
+    97 00000000 BC[00080000]            	mov esp, StackTop
+    98                                  
+    99 00000005 0F0105[00000000]        	sgdt [_gdt_info] ;old GDT (0~15:Limit  16~47:Base)
+   100 0000000C E8(00000000)            	call _cinit
+   101 00000011 0F0115[00000000]        	lgdt [_gdt_info] ;new GDT (0~15:Limit  16~47:Base)
+   102 00000018 0F011D[00000000]        	lidt [_idt_info]
+   103 0000001F EA[26000000]0800        	jmp SELECTOR_KERNEL_CS:csinit ;強制使用cstart初始化的GDT結構
+   104                                  csinit:
+   105                                  	;call _set_timer
+   106                                  	;sti ;開中斷
+   107 00000026 E9(00000000)            	jmp _kernel_main
+   108                                  
+   109                                  
+   110                                  _restart:	
+   111 0000002B 8925[00000000]          	mov [kernel_esp], esp ;save the kernel esp
+   112                                  	
+   113 00000031 8B25[00000000]          	mov esp, [_p_proc_ready]
+   114 00000037 0F00542408              	lldt [esp + P_LDT_SEL]
+   115 0000003C 8B2424                  	mov esp,[esp] ;get the esp in task_stack
+   116 0000003F 0FA9                    	pop gs	
+   117 00000041 0FA1                    	pop fs	
+   118 00000043 07                      	pop es
+   119 00000044 1F                      	pop ds
+   120 00000045 61                      	popad
+   121                                  
+   122 00000046 CF                      	iretd
+   123                                  
+   124                                  ;-----------------------------------------------------------------
+   125                                  ;Hardware interrupt
+   126                                  ;-----------------------------------------------------------------
+   127                                  ;hardware interrupt master
+   128                                  %macro hwint_master 1
+   129                                  	push	%1 ;push the first argument
+   130                                  	call	_spurious_irq
+   131                                  	hlt
+   132                                  %endmacro
+   133                                  
+   134 00000047 90<rept>                ALIGN 16
+   135                                  _hwint00: ;IRQ0 interrupt handler
+   136 00000050 60                      	pushad	
+   137 00000051 1E                      	push ds
+   138 00000052 06                      	push es
+   139 00000053 0FA0                    	push fs	
+   140 00000055 0FA8                    	push gs
+   141                                  
+   142 00000057 A1[00000000]            	mov eax,[_p_proc_ready]
+   143 0000005C 8920                    	mov [eax],esp ;save the process esp
+   144                                  
+   145 0000005E 668CD2                  	mov	dx, ss
+   146 00000061 8EDA                    	mov	ds, dx
+   147 00000063 8EC2                    	mov	es, dx
+   148                                  
+   149 00000065 8B25[00000000]          	mov esp, [kernel_esp] ;load the kernel esp
+   150                                  	
+   151                                  	;inc byte [gs:0] ;increase the upper-left character of the screen
+   152                                  	
+   153 0000006B E8(00000000)            	call _scheduler
+   154                                  	
+   155 00000070 8925[00000000]          	mov [kernel_esp], esp ;save the kernel esp
+   156                                  	
+   157 00000076 8B25[00000000]          	mov esp, [_p_proc_ready]
+   158 0000007C 0F00542408              	lldt [esp + P_LDT_SEL]
+   159 00000081 8B2424                  	mov esp, [esp] ; *(_p_proc_ready->esp); get the esp in task_stack
+   160                                  
+   161 00000084 0FA9                    	pop gs
+   162 00000086 0FA1                    	pop fs
+   163 00000088 07                      	pop es
+   164 00000089 1F                      	pop ds
+   165 0000008A 61                      	popad
+   166                                  
+   167 0000008B B020                    	mov al, 20h ;EOI
+   168 0000008D E620                    	out 20h, al  ;當每次中斷結束，需要發送一個EOI給8259A，以便繼續接收中斷。
+   169                                  
+   170 0000008F CF                      	iretd
+   171                                  
+   172                                  ALIGN 16		;reserved space for macro
+   173                                  _hwint01:
+   174                                  	hwint_master 1
+   175 00000090 6A01                <1>  push %1
+   176 00000092 E8(00000000)        <1>  call _spurious_irq
+   177 00000097 F4                  <1>  hlt
+   178                                  
+   179 00000098 90<rept>                ALIGN 16
+   180                                  _hwint02:
+   181                                  	hwint_master 2
+   182 000000A0 6A02                <1>  push %1
+   183 000000A2 E8(00000000)        <1>  call _spurious_irq
+   184 000000A7 F4                  <1>  hlt
+   185                                  
+   186 000000A8 90<rept>                ALIGN 16
+   187                                  _hwint03:
+   188                                  	hwint_master 3
+   189 000000B0 6A03                <1>  push %1
+   190 000000B2 E8(00000000)        <1>  call _spurious_irq
+   191 000000B7 F4                  <1>  hlt
+   192                                  
+   193 000000B8 90<rept>                ALIGN 16
+   194                                  _hwint04:
+   195                                  	hwint_master 4
+   196 000000C0 6A04                <1>  push %1
+   197 000000C2 E8(00000000)        <1>  call _spurious_irq
+   198 000000C7 F4                  <1>  hlt
+   199                                  
+   200 000000C8 90<rept>                ALIGN 16
+   201                                  _hwint05:
+   202                                  	hwint_master 5
+   203 000000D0 6A05                <1>  push %1
+   204 000000D2 E8(00000000)        <1>  call _spurious_irq
+   205 000000D7 F4                  <1>  hlt
+   206                                  
+   207 000000D8 90<rept>                ALIGN 16
+   208                                  _hwint06:
+   209                                  	hwint_master 6
+   210 000000E0 6A06                <1>  push %1
+   211 000000E2 E8(00000000)        <1>  call _spurious_irq
+   212 000000E7 F4                  <1>  hlt
+   213                                  
+   214 000000E8 90<rept>                ALIGN 16
+   215                                  _hwint07:
+   216                                  	hwint_master 7
+   217 000000F0 6A07                <1>  push %1
+   218 000000F2 E8(00000000)        <1>  call _spurious_irq
+   219 000000F7 F4                  <1>  hlt
+   220                                  	
+   221                                  ;hardware interrupt slave
+   222                                  %macro hwint_slave 1
+   223                                  	push	%1 	;push the first argument
+   224                                  	call	_spurious_irq
+   225                                  	hlt
+   226                                  %endmacro
+   227                                  
+   228 000000F8 90<rept>                ALIGN 16
+   229                                  _hwint08:
+   230                                  	hwint_slave	8
+   231 00000100 6A08                <1>  push %1
+   232 00000102 E8(00000000)        <1>  call _spurious_irq
+   233 00000107 F4                  <1>  hlt
+   234                                  
+   235 00000108 90<rept>                ALIGN 16
+   236                                  _hwint09:
+   237                                  	hwint_slave	9
+   238 00000110 6A09                <1>  push %1
+   239 00000112 E8(00000000)        <1>  call _spurious_irq
+   240 00000117 F4                  <1>  hlt
+   241                                  
+   242 00000118 90<rept>                ALIGN 16
+   243                                  _hwint10:
+   244                                  	hwint_slave	10
+   245 00000120 6A0A                <1>  push %1
+   246 00000122 E8(00000000)        <1>  call _spurious_irq
+   247 00000127 F4                  <1>  hlt
+   248                                  
+   249 00000128 90<rept>                ALIGN 16
+   250                                  _hwint11:
+   251                                  	hwint_slave	11
+   252 00000130 6A0B                <1>  push %1
+   253 00000132 E8(00000000)        <1>  call _spurious_irq
+   254 00000137 F4                  <1>  hlt
+   255                                  
+   256 00000138 90<rept>                ALIGN 16
+   257                                  _hwint12:
+   258                                  	hwint_slave	12
+   259 00000140 6A0C                <1>  push %1
+   260 00000142 E8(00000000)        <1>  call _spurious_irq
+   261 00000147 F4                  <1>  hlt
+   262                                  
+   263 00000148 90<rept>                ALIGN 16
+   264                                  _hwint13:
+   265                                  	hwint_slave	13
+   266 00000150 6A0D                <1>  push %1
+   267 00000152 E8(00000000)        <1>  call _spurious_irq
+   268 00000157 F4                  <1>  hlt
+   269                                  
+   270 00000158 90<rept>                ALIGN 16
+   271                                  _hwint14:
+   272                                  	hwint_slave	14
+   273 00000160 6A0E                <1>  push %1
+   274 00000162 E8(00000000)        <1>  call _spurious_irq
+   275 00000167 F4                  <1>  hlt
+   276                                  
+   277 00000168 90<rept>                ALIGN 16
+   278                                  _hwint15:
+   279                                  	hwint_slave	15
+   280 00000170 6A0F                <1>  push %1
+   281 00000172 E8(00000000)        <1>  call _spurious_irq
+   282 00000177 F4                  <1>  hlt
+   283                                  
+   284                                  ;----------------------------------------------
+   285                                  ;Exception interrupt
+   286                                  ;----------------------------------------------
+   287                                  ;vector 8, 10-14,17, 預設有錯誤碼, 會自動push errorcode
+   288                                  ;為了用exception_handler接參數, 其他vector需手動push noerrorcode
+   289                                  _divide_error:
+   290 00000178 6AFF                    	push 0xFFFFFFFF		;no error code
+   291 0000017A 6A00                    	push 0				;vector_no = 0
+   292 0000017C EB4E                    	jmp exception
+   293                                  _debug_exception:
+   294 0000017E 6AFF                    	push 0xFFFFFFFF		;no error code
+   295 00000180 6A01                    	push 1				;vector_no = 1
+   296 00000182 EB48                    	jmp exception
+   297                                  _nmi:
+   298 00000184 6AFF                    	push 0xFFFFFFFF		;no error code
+   299 00000186 6A02                    	push 2				;vector_no = 2
+   300 00000188 EB42                    	jmp exception
+   301                                  _breakpoint_exception
+   302 0000018A 6AFF                    	push 0xFFFFFFFF		;no error code
+   303 0000018C 6A03                    	push 3				;vector_no = 3
+   304 0000018E EB3C                    	jmp exception
+   305                                  _overflow:
+   306 00000190 6AFF                    	push 0xFFFFFFFF		;no error code
+   307 00000192 6A04                    	push 4				;vector_no = 4
+   308 00000194 EB36                    	jmp exception
+   309                                  _bounds_check:
+   310 00000196 6AFF                    	push 0xFFFFFFFF		;no error code
+   311 00000198 6A05                    	push 5				;vector_no = 5
+   312 0000019A EB30                    	jmp exception
+   313                                  _invalid_opcode:
+   314 0000019C 6AFF                    	push 0xFFFFFFFF		;no error code
+   315 0000019E 6A06                    	push 6				;vector_no = 6
+   316 000001A0 EB2A                    	jmp exception
+   317                                  _coproc_not_avalible:
+   318 000001A2 6AFF                    	push 0xFFFFFFFF		;no error code
+   319 000001A4 6A07                    	push 7				;vector_no = 7
+   320 000001A6 EB24                    	jmp exception
+   321                                  _double_fault:
+   322 000001A8 6A08                    	push 8				;vector_no = 8
+   323 000001AA EB20                    	jmp	exception
+   324                                  _coproc_seg_overrun:
+   325 000001AC 6AFF                    	push 0xFFFFFFFF		;no error code
+   326 000001AE 6A09                    	push 9				;vector_no = 9
+   327 000001B0 EB1A                    	jmp exception
+   328                                  _invalid_tss:
+   329 000001B2 6A0A                    	push 10				;vector_no = 10
+   330 000001B4 EB16                    	jmp	exception
+   331                                  _seg_not_present:
+   332 000001B6 6A0B                    	push 11				;vector_no = 11
+   333 000001B8 EB12                    	jmp	exception
+   334                                  _stack_exception:
+   335 000001BA 6A0C                    	push 12				;vector_no = 12
+   336 000001BC EB0E                    	jmp	exception
+   337                                  _general_protection:
+   338 000001BE 6A0D                    	push 13				;vector_no = 13
+   339 000001C0 EB0A                    	jmp	exception
+   340                                  _page_fault:
+   341 000001C2 6A0E                    	push 14				;vector_no = 14
+   342 000001C4 EB06                    	jmp	exception
+   343                                  _coproc_error:
+   344 000001C6 6AFF                    	push 0xFFFFFFFF		;no error code
+   345 000001C8 6A0F                    	push 15				;vector_no = 15
+   346 000001CA EB00                    	jmp exception
+   347                                  
+   348                                  exception:
+   349 000001CC E8(00000000)            	call _exception_handler
+   350 000001D1 F4                      	hlt
