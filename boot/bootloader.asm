@@ -1,14 +1,3 @@
-;/******************************
-;* description: IBM AT pc bootup sector
-;*              BIOS load boot sector onto 0000:7c00 and execute it
-;*              Boot sector will load os image onto 0x00010000~0x00090000
-;*
-;* filename: bootsect_floppy.asm
-;* author: Book Chen
-;* date:20091105
-;*******************************
-;*/ 
-
 %define DRIVE_FLOPPY_A    0x00     ;drive number used in int 13h
 %define DRIVE_FLOPPY_B    0x01     ;drive number used in int 13h
 %define DRIVE_HD_1        0x80     ;drive number used in int 13h
@@ -125,7 +114,7 @@ L_LoadOsImageDeadLoop2:            	;dead loop
     ret                            	;this line should never execute
 	
 PrintBootMessage:	
-    mov ah,0x03                    	;Ū����Ц�m get cursor position command
+    mov ah,0x03                    	;Åª¨ú´å¼Ð¦ì¸m get cursor position command
     mov bh,0x00                    	;page number 
     int 0x10                       	;screen io...dh=row number,dl=line number
     mov cx,40	                  	;string length
@@ -134,7 +123,7 @@ PrintBootMessage:
     mov ax,0x1301                  	;ah=0x13...write string,al=0x01...write mode
     int 0x10                       	;show meaasge on video
 	call PrintAuthor
-    ret     						;��^
+    ret     						;ªð¦^
 			
 PrintLoadKernelOkMessage:	
     mov ah,0x03                    	;get cursor position command
