@@ -170,10 +170,10 @@ MessagePool:
 		db 'Copyright (C) Forever'
 		db 0x0d
 		db 0x0a
-		db 'Heng-Chih Hsieh, Guan-Yi Li, Han-Wen Zhang'
+		db 'Hunter Hsieh'
 		db 0x0d
 		db 0x0a
-		db 'M10317004, M10317015, M10317021'
+		db 'M10317004'
 		db 0x0d
 		db 0x0a
 		db 0x00
